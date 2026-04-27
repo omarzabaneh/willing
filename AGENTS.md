@@ -377,7 +377,7 @@ All components are in `client/src/components/`. **Use these instead of recreatin
 
 - **`PasswordResetCard`**: Self-contained password reset form integrated with auth context and validation/error handling.
 - **`ToggleButton`**: React-hook-form-friendly toggle group. Required props: `form`, `name`, `label`, `options`. Optional props: `disabled` (default `false`), `compact` (default `false`). Option-level optional fields: `description`, `Icon`, `btnColor`.
-- **`CalendarInfo`**: Shared date input abstraction supporting form mode and controlled mode. Supports single-date, interval (`start/end`, default), range, and multiple-date selection modes in controlled usage, plus single-date form usage via `dateName`. Optional common props: `startLabel`, `endLabel`, `className`, `disabledDates`, `dateDetails`.
+- **`CalendarInfo`**: Shared date input abstraction supporting form mode and controlled mode. Supports single-date, range (default), and multiple-date selection modes in controlled usage, plus single-date form usage via `dateName`. The picker uses fixed weeks, shows outside days, and includes a native month/year input for direct navigation. Optional common props: `startLabel`, `endLabel`, `className`, `disabledDates`, `dateDetails`.
 
 ### Interaction and Workflow Components
 

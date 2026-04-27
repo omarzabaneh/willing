@@ -7,7 +7,7 @@ import database from '../../../db/index.ts';
 import { compare } from '../../../services/bcrypt/index.ts';
 import * as embeddingUpdates from '../../../services/embeddings/updates.ts';
 import * as jwtService from '../../../services/jwt/index.ts';
-import * as emailService from '../../../services/smtp/emails.ts';
+import * as emailService from '../../../services/resend/emails.ts';
 import * as volunteerService from '../../../services/volunteer/index.ts';
 import { createAdminAccount, createOrganizationAccount, createVolunteerAccount } from '../../../tests/fixtures/accounts.ts';
 import { createOrganizationRequest } from '../../../tests/fixtures/organizationData.ts';
@@ -1188,6 +1188,18 @@ describe('GET /volunteer/certificate', () => {
 });
 
 describe('POST /volunteer/certificate/issue', () => {
+  test('returns 400 when volunteer has zero completed hours', async () => {
+    const { token } = await createVolunteerAccount(transaction, { email: 'certificate-zero-hours@example.com' });
+
+    const response = await server
+      .post('/volunteer/certificate/issue')
+      .set('Authorization', 'Bearer ' + token)
+      .send({ org_ids: [] })
+      .expect(400);
+
+    expect(response.body.message).toBe('You need completed volunteering hours before generating a certificate.');
+  });
+
   test('rejects disabled organizations while still counting their attended hours in total certificate hours', async () => {
     const { volunteer, token } = await createVolunteerAccount(transaction, { email: 'certificate-issue-disabled-org@example.com' });
     const { organization: activeOrg } = await createOrganizationAccount(transaction, { email: 'certificate-issue-active-org@example.com' });
@@ -1249,7 +1261,7 @@ describe('POST /volunteer/certificate/issue', () => {
       .returning(['id'])
       .executeTakeFirstOrThrow();
 
-    await transaction
+    const enrollments = await transaction
       .insertInto('enrollment')
       .values([
         {
@@ -1265,6 +1277,19 @@ describe('POST /volunteer/certificate/issue', () => {
           created_at: new Date('2026-02-03T00:00:00.000Z'),
         },
       ])
+      .returning(['id', 'posting_id'])
+      .execute();
+
+    await transaction
+      .insertInto('enrollment_date')
+      .values(enrollments.map(enrollment => ({
+        enrollment_id: enrollment.id,
+        posting_id: enrollment.posting_id,
+        date: enrollment.posting_id === activePosting.id
+          ? new Date('2026-02-01T00:00:00.000Z')
+          : new Date('2026-02-02T00:00:00.000Z'),
+        attended: true,
+      })))
       .execute();
 
     const response = await server

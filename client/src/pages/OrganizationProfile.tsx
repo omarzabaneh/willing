@@ -119,7 +119,7 @@ function OrganizationProfile() {
       organization_name: data.organization.name,
       organization_logo_path: data.organization.logo_path,
       crisis_name: null,
-      enrollment_count: 0,
+      enrollment_count: posting.enrollment_count,
       application_status: 'none',
     }));
   }, [data]);

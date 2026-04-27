@@ -30,7 +30,7 @@
     "script:verify-embeddings": "tsx src/scripts/recommendation/verify.ts",
     "script:recommendation:generate-cvs": "tsx src/scripts/recommendation/generate-cvs.ts",
     "script:recommendation:run": "tsx src/scripts/recommendation/run.ts",
-    "script:test-smtp": "tsx src/scripts/test-smtp.ts"
+    "script:test-resend": "tsx src/scripts/test-resend.ts"
   },
   "devDependencies": {
     "@stylistic/eslint-plugin": "^5.7.1",
@@ -65,10 +65,10 @@
     "kysely": "^0.28.10",
     "morgan": "^1.10.1",
     "multer": "^2.1.1",
-    "nodemailer": "^8.0.0",
     "openai": "^6.25.0",
     "pdf-parse": "^2.4.5",
     "pg": "^8.17.2",
+    "resend": "^6.12.2",
     "sharp": "^0.34.5",
     "zod": "^4.3.6"
   }

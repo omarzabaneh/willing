@@ -1,10 +1,11 @@
+import { sql } from 'kysely';
 import supertest from 'supertest';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import createApp from '../../app.ts';
 import database from '../../db/index.ts';
 import { compare } from '../../services/bcrypt/index.ts';
-import * as emailService from '../../services/smtp/emails.ts';
+import * as emailService from '../../services/resend/emails.ts';
 import { createAdminAccount, createOrganizationAccount, createVolunteerAccount } from '../../tests/fixtures/accounts.ts';
 import { createPosting } from '../../tests/fixtures/organizationData.ts';
 
@@ -699,6 +700,170 @@ describe('DELETE /user/account', () => {
       .expect(409);
 
     expect(response.body.message).toContain('currently running');
+  });
+
+  test('returns 409 when organization posting ends later today', async () => {
+    const { organization, token, plainPassword } = await createOrganizationAccount(transaction, {
+      email: 'running-today-org@example.com',
+      phone_number: '+10000000055',
+      url: 'https://running-today-org.example.org',
+    });
+
+    await transaction
+      .insertInto('posting')
+      .values({
+        organization_id: organization.id,
+        title: 'Running Today Posting',
+        description: 'In progress now',
+        latitude: 33.9,
+        longitude: 35.5,
+        max_volunteers: 10,
+        start_date: sql<Date>`CURRENT_DATE`,
+        start_time: sql<string>`(CURRENT_TIMESTAMP - interval '1 hour')::time`,
+        end_date: sql<Date>`CURRENT_DATE`,
+        end_time: sql<string>`(CURRENT_TIMESTAMP + interval '1 hour')::time`,
+        minimum_age: 18,
+        automatic_acceptance: true,
+        is_closed: false,
+        allows_partial_attendance: false,
+        location_name: 'Beirut',
+      })
+      .execute();
+
+    const response = await server
+      .delete('/user/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: plainPassword })
+      .expect(409);
+
+    expect(response.body.message).toContain('currently running');
+  });
+
+  test('returns 409 when organization posting ends in the next 5 minutes', async () => {
+    const { organization, token, plainPassword } = await createOrganizationAccount(transaction, {
+      email: 'running-next-five-org@example.com',
+      phone_number: '+10000000056',
+      url: 'https://running-next-five-org.example.org',
+    });
+
+    await transaction
+      .insertInto('posting')
+      .values({
+        organization_id: organization.id,
+        title: 'Ends In Five Minutes Posting',
+        description: 'Should still block account deletion',
+        latitude: 33.9,
+        longitude: 35.5,
+        max_volunteers: 10,
+        start_date: sql<Date>`CURRENT_DATE`,
+        start_time: sql<string>`(CURRENT_TIMESTAMP - interval '1 hour')::time`,
+        end_date: sql<Date>`CURRENT_DATE`,
+        end_time: sql<string>`(CURRENT_TIMESTAMP + interval '5 minutes')::time`,
+        minimum_age: 18,
+        automatic_acceptance: true,
+        is_closed: false,
+        allows_partial_attendance: false,
+        location_name: 'Beirut',
+      })
+      .execute();
+
+    const response = await server
+      .delete('/user/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: plainPassword })
+      .expect(409);
+
+    expect(response.body.message).toContain('currently running');
+  });
+
+  test('allows organization deletion when an ongoing posting is closed', async () => {
+    const { organization, token, plainPassword } = await createOrganizationAccount(transaction, {
+      email: 'closed-running-org@example.com',
+      phone_number: '+10000000057',
+      url: 'https://closed-running-org.example.org',
+    });
+
+    await transaction
+      .insertInto('posting')
+      .values({
+        organization_id: organization.id,
+        title: 'Closed Ongoing Posting',
+        description: 'Should not block account deletion once closed',
+        latitude: 33.9,
+        longitude: 35.5,
+        max_volunteers: 10,
+        start_date: sql<Date>`CURRENT_DATE`,
+        start_time: sql<string>`(CURRENT_TIMESTAMP - interval '1 hour')::time`,
+        end_date: sql<Date>`CURRENT_DATE`,
+        end_time: sql<string>`(CURRENT_TIMESTAMP + interval '1 hour')::time`,
+        minimum_age: 18,
+        automatic_acceptance: true,
+        is_closed: true,
+        allows_partial_attendance: false,
+        location_name: 'Beirut',
+      })
+      .execute();
+
+    const response = await server
+      .delete('/user/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: plainPassword })
+      .expect(200);
+
+    expect(response.body).toEqual({});
+
+    const deletedOrganization = await transaction
+      .selectFrom('organization_account')
+      .select(['is_deleted'])
+      .where('id', '=', organization.id)
+      .executeTakeFirstOrThrow();
+
+    expect(deletedOrganization.is_deleted).toBe(true);
+  });
+
+  test('allows organization deletion when the posting ended earlier today', async () => {
+    const { organization, token, plainPassword } = await createOrganizationAccount(transaction, {
+      email: 'ended-org@example.com',
+      phone_number: '+10000000054',
+      url: 'https://ended-org.example.org',
+    });
+
+    await transaction
+      .insertInto('posting')
+      .values({
+        organization_id: organization.id,
+        title: 'Ended Today Posting',
+        description: 'Already ended earlier today',
+        latitude: 33.9,
+        longitude: 35.5,
+        max_volunteers: 10,
+        start_date: sql<Date>`CURRENT_DATE`,
+        start_time: sql<string>`(CURRENT_TIMESTAMP::time - interval '2 hours')::time`,
+        end_date: sql<Date>`CURRENT_DATE`,
+        end_time: sql<string>`(CURRENT_TIMESTAMP::time - interval '2 minutes')::time`,
+        minimum_age: 18,
+        automatic_acceptance: true,
+        is_closed: false,
+        allows_partial_attendance: false,
+        location_name: 'Beirut',
+      })
+      .execute();
+
+    const response = await server
+      .delete('/user/account')
+      .set('Authorization', `Bearer ${token}`)
+      .send({ password: plainPassword })
+      .expect(200);
+
+    expect(response.body).toEqual({});
+
+    const deletedOrganization = await transaction
+      .selectFrom('organization_account')
+      .select(['is_deleted', 'token_version'])
+      .where('id', '=', organization.id)
+      .executeTakeFirstOrThrow();
+
+    expect(deletedOrganization.is_deleted).toBe(true);
   });
 
   test('cleans up future postings when organization deletes account', async () => {

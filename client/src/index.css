@@ -101,13 +101,15 @@ body {
 .willing-day-picker {
   --rdp-accent-color: var(--color-primary);
   --rdp-accent-background-color: color-mix(in oklch, var(--color-primary) 18%, transparent);
-  --rdp-day_button-border-radius: var(--radius-field);
+  --rdp-day_button-border-radius: 0.5rem;
   --rdp-day_button-border: 1px solid transparent;
   --rdp-selected-border: 1px solid transparent;
   --rdp-range_middle-background-color: color-mix(in oklch, var(--color-primary) 24%, transparent);
   --rdp-range_middle-color: var(--color-base-content);
   --rdp-range_start-color: var(--color-primary-content);
   --rdp-range_end-color: var(--color-primary-content);
+
+  display: flex;
 }
 
 .willing-day-picker .rdp-caption_label,
@@ -119,19 +121,49 @@ body {
   margin-left: 0.8rem;
 }
 
-.willing-day-picker .rdp-nav_button {
+.willing-day-picker .rdp-button_next,
+.willing-day-picker .rdp-button_previous {
   color: var(--color-base-content);
+  fill: currentColor;
   border-radius: var(--radius-field);
   transition: background-color 180ms ease, color 180ms ease;
 }
 
-.willing-day-picker .rdp-nav_button:hover {
+.willing-day-picker .rdp-button_next:hover,
+.willing-day-picker .rdp-button_previous:hover {
   background: color-mix(in oklch, var(--color-base-content) 10%, transparent);
+}
+
+.willing-day-picker .rdp-chevron {
+  fill: currentColor;
+}
+
+.willing-day-picker .rdp-months {
+  flex-grow: 1;
+  max-width: none;
+}
+
+.willing-day-picker .rdp-month {
+  width: 100%;
+}
+
+.willing-day-picker .rdp-month_grid {
+  margin: 0 auto;
+}
+
+.willing-day-picker .rdp-month_caption {
+  margin: 0;
 }
 
 .willing-day-picker .rdp-day_button {
   color: var(--color-base-content);
+  border-radius: 0.5rem;
   transition: background-color 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.willing-day-picker .rdp-day_button:hover,
+.willing-day-picker .rdp-day_button:focus-visible {
+  border-radius: 0.5rem;
 }
 
 .willing-day-picker .rdp-selected .rdp-day_button {

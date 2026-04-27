@@ -12,7 +12,7 @@ export type OrganizationVolunteerCvDownloadResponse = never;
 
 export type OrganizationProfileResponse = {
   organization: OrganizationAccountWithoutPasswordAndVector;
-  postings: (PostingWithoutVectors & { skills: PostingSkill[] })[];
+  postings: (PostingWithoutVectors & { skills: PostingSkill[]; enrollment_count: number })[];
 };
 
 export type OrganizationGetMeResponse = {

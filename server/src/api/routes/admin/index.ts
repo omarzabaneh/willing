@@ -27,7 +27,7 @@ import { type Database } from '../../../db/tables/index.ts';
 import { compare, hash } from '../../../services/bcrypt/index.ts';
 import { recomputeOrganizationVector } from '../../../services/embeddings/updates.ts';
 import { generateJWT } from '../../../services/jwt/index.ts';
-import { sendOrganizationAcceptanceEmail, sendOrganizationRejectionEmail, sendPostingDeletedEmail } from '../../../services/smtp/emails.ts';
+import { sendOrganizationAcceptanceEmail, sendOrganizationRejectionEmail, sendPostingDeletedEmail } from '../../../services/resend/emails.ts';
 import { loginInfoSchema } from '../../../types.ts';
 import { parseListQuery } from '../utils/listQuery.ts';
 import { getSingleQueryValue } from '../utils/queryValue.ts';

@@ -261,10 +261,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user]);
 
   const deleteAccount = useCallback(async (password: string) => {
+    const now = new Date();
+    const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const localTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:00`;
+
     await requestServer<UserDeleteAccountResponse>('/user/account', {
       method: 'DELETE',
       includeJwt: true,
-      body: { password },
+      body: {
+        password,
+        local_date: localDate,
+        local_time: localTime,
+      },
     });
 
     logout();

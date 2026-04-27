@@ -7,11 +7,11 @@ import {
   sendPasswordResetEmail,
   sendVolunteerApplicationAcceptedEmail,
   sendVolunteerApplicationRejectedEmail,
-} from '../services/smtp/emails.ts';
+} from '../services/resend/emails.ts';
 
 import type { OrganizationRequest } from '../db/tables/index.ts';
 
-const SENDER_EMAIL = config.SMTP_USER;
+const SEND_TO = config.WILLING_SENDER_EMAIL!;
 const TOTAL_ROUNDS = 1;
 const DELAY_MS = 2000;
 const TEMP_PASSWORD = 'TempPass123!';
@@ -25,10 +25,10 @@ function sleep(ms: number): Promise<void> {
 
 const fakeOrganizationRequest: OrganizationRequest = {
   id: 0,
-  name: 'SMTP Test Organization',
-  email: SENDER_EMAIL!,
+  name: 'Resend Test Organization',
+  email: SEND_TO,
   phone_number: '+96171123456',
-  url: 'https://smtp-test.willing.local',
+  url: 'https://resend-test.willing.local',
   latitude: 33.8938,
   longitude: 35.5018,
   location_name: 'Beirut',
@@ -36,13 +36,14 @@ const fakeOrganizationRequest: OrganizationRequest = {
 };
 
 async function run() {
-  if (!SENDER_EMAIL) {
-    throw new Error('Set SMTP_USER in env.');
+  if (!SEND_TO) {
+    console.error('Please set the WILLING_SENDER_EMAIL variable.');
+    return;
   }
 
-  console.log('Starting SMTP template test run...');
+  console.log('Starting Resend template test run...');
   console.log(`NODE_ENV: ${config.NODE_ENV}`);
-  console.log(`Target email: ${SENDER_EMAIL}`);
+  console.log(`Target email: ${SEND_TO}`);
   console.log(`Rounds: ${TOTAL_ROUNDS}`);
   console.log(`Delay between emails: ${DELAY_MS}ms`);
 
@@ -53,29 +54,29 @@ async function run() {
     const tasks: { name: string; run: () => Promise<void> }[] = [
       {
         name: 'sendPasswordResetEmail',
-        run: () => sendPasswordResetEmail(SENDER_EMAIL, 'SMTP Tester', `${RESET_TOKEN}-${round}`),
+        run: () => sendPasswordResetEmail(SEND_TO, 'Resend Tester', `${RESET_TOKEN}-${round}`),
       },
       {
         name: 'sendVolunteerApplicationAcceptedEmail',
         run: () => sendVolunteerApplicationAcceptedEmail({
-          volunteerEmail: SENDER_EMAIL,
-          volunteerName: 'SMTP Tester',
-          organizationName: 'SMTP Test Organization',
+          volunteerEmail: SEND_TO,
+          volunteerName: 'Resend Tester',
+          organizationName: 'Resend Test Organization',
           postingTitle: 'Test Posting',
         }),
       },
       {
         name: 'sendVolunteerApplicationRejectedEmail',
         run: () => sendVolunteerApplicationRejectedEmail({
-          volunteerEmail: SENDER_EMAIL,
-          volunteerName: 'SMTP Tester',
-          organizationName: 'SMTP Test Organization',
+          volunteerEmail: SEND_TO,
+          volunteerName: 'Resend Tester',
+          organizationName: 'Resend Test Organization',
           postingTitle: 'Test Posting',
         }),
       },
       {
         name: 'sendAdminOrganizationRequestEmail',
-        run: () => sendAdminOrganizationRequestEmail(fakeOrganizationRequest, [SENDER_EMAIL]),
+        run: () => sendAdminOrganizationRequestEmail(fakeOrganizationRequest, [SEND_TO]),
       },
       {
         name: 'sendOrganizationAcceptanceEmail',
@@ -83,7 +84,7 @@ async function run() {
       },
       {
         name: 'sendOrganizationRejectionEmail',
-        run: () => sendOrganizationRejectionEmail(fakeOrganizationRequest, 'SMTP test rejection reason'),
+        run: () => sendOrganizationRejectionEmail(fakeOrganizationRequest, 'Resend test rejection reason'),
       },
     ];
 
@@ -108,7 +109,7 @@ async function run() {
     if (round < TOTAL_ROUNDS) await sleep(DELAY_MS);
   }
 
-  console.log('SMTP template test run completed.');
+  console.log('Resend template test run completed.');
   console.log(`Sent: ${sent}`);
   console.log(`Failed: ${failed}`);
 
@@ -120,7 +121,7 @@ async function run() {
 }
 
 run().catch((error) => {
-  console.error('SMTP test script failed:', error);
+  console.error('Resend test script failed:', error);
   void db.destroy();
   process.exitCode = 1;
 });

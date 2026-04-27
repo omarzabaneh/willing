@@ -1,21 +1,11 @@
-import nodemailer from 'nodemailer';
+import { Resend } from 'resend';
 
 import config from '../../config.ts';
 
-const {
-  SMTP_HOST,
-  SMTP_PORT,
-  SMTP_USER,
-  SMTP_PASS,
-  MAIL_FROM,
-} = config;
-
-const transporter = nodemailer.createTransport({
-  host: SMTP_HOST,
-  port: SMTP_PORT,
-  secure: false,
-  auth: { user: SMTP_USER, pass: SMTP_PASS },
-});
+let resend: Resend;
+if (config.NODE_ENV === 'production') {
+  resend = new Resend(config.RESEND_API_KEY);
+}
 
 function indentLines(content: string): string {
   return content
@@ -25,30 +15,28 @@ function indentLines(content: string): string {
 }
 
 export async function sendEmail(opts: {
-  to: string;
+  to: string[];
   subject: string;
   text: string;
   html?: string;
 }) {
   if (config.NODE_ENV === 'production') {
-    try {
-      return transporter.sendMail({
-        from: MAIL_FROM,
-        to: opts.to,
-        subject: opts.subject,
-        text: opts.text,
-        html: opts.html,
-      });
-    } catch (_error) {
-      throw new Error('Something went wrong.');
+    const { error } = await resend.emails.send({
+      from: 'Willing <' + config.WILLING_SENDER_EMAIL + '>',
+      to: opts.to,
+      subject: opts.subject,
+      html: opts.html || opts.text,
+    });
+    if (error) {
+      console.error('Couldn\'t send mail:', error);
+      // throw new Error('Something went wrong when sending email.');
     }
   } else {
     const timestamp = new Date().toISOString();
     const output = [
       '',
-      '=========================== [DEV] SMTP EMAIL ===========================',
+      '============================== [DEV] EMAIL =============================',
       `Time: ${timestamp}`,
-      `From: ${MAIL_FROM ?? '(MAIL_FROM not set)'}`,
       `To: ${opts.to}`,
       `Subject: ${opts.subject}`,
       `Text length: ${opts.text.length} chars`,

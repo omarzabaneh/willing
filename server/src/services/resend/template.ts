@@ -118,7 +118,7 @@ export function buildEmailBody(content: EmailContent): { html: string; text: str
                 ${ctaHtml}
                 ${noteHtml}
                 <hr style="border:none;border-top:1px solid ${EMAIL_THEME.border};margin:24px 0;" />
-                <p class="willing-footer" style="margin:0;color:${EMAIL_THEME.muted};font-size:13px;line-height:1.5;">Willing Team<br />${config.SMTP_USER}</p>
+                <p class="willing-footer" style="margin:0;color:${EMAIL_THEME.muted};font-size:13px;line-height:1.5;">Willing Team<br />${config.WILLING_SENDER_EMAIL}</p>
               </div>
             </td>
           </tr>

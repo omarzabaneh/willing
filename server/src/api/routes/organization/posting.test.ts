@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 
 import createApp from '../../../app.ts';
 import database from '../../../db/index.ts';
-import * as smtpEmails from '../../../services/smtp/emails.ts';
+import * as resendEmails from '../../../services/resend/emails.ts';
 import { createOrganizationAccount, createVolunteerAccount } from '../../../tests/fixtures/accounts.ts';
 
 import type { Database } from '../../../db/tables/index.ts';
@@ -87,7 +87,7 @@ describe('Organization posting applications', () => {
   });
 
   test('automatically rejects pending applications for an ended review-based posting', async () => {
-    const rejectionEmailSpy = vi.spyOn(smtpEmails, 'sendVolunteerApplicationRejectedEmail').mockResolvedValue(undefined);
+    const rejectionEmailSpy = vi.spyOn(resendEmails, 'sendVolunteerApplicationRejectedEmail').mockResolvedValue(undefined);
     const { organization, token } = await createOrganizationAccount(transaction, { email: 'org-ended-auto-reject@example.com' });
     const { volunteer } = await createVolunteerAccount(transaction, { email: 'vol-ended-auto-reject@example.com' });
     const yesterday = new Date();
@@ -620,7 +620,7 @@ describe('Organization posting management', () => {
       ])
       .execute();
 
-    const postingDeletedEmailSpy = vi.spyOn(smtpEmails, 'sendPostingDeletedEmail').mockResolvedValue(undefined);
+    const postingDeletedEmailSpy = vi.spyOn(resendEmails, 'sendPostingDeletedEmail').mockResolvedValue(undefined);
 
     await server
       .delete(`/organization/posting/${posting.id}`)

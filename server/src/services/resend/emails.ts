@@ -25,7 +25,7 @@ export async function sendOrganizationAcceptanceEmail(
     tone: 'success',
   });
 
-  await sendEmail({ to, subject, text, html });
+  await sendEmail({ to: [to], subject, text, html });
 }
 
 export async function sendPasswordResetEmail(to: string, name: string, resetToken: string) {
@@ -42,7 +42,7 @@ export async function sendPasswordResetEmail(to: string, name: string, resetToke
     tone: 'primary',
   });
 
-  await sendEmail({ to, subject, text, html });
+  await sendEmail({ to: [to], subject, text, html });
 }
 
 export async function sendOrganizationRejectionEmail(
@@ -62,11 +62,11 @@ export async function sendOrganizationRejectionEmail(
     intro: `Hello ${organizationRequest.name}, your organization request was not approved.`,
     ...(rows ? { rows } : {}),
     paragraphs: ['You can submit a new request with updated information if needed.'],
-    note: `For any extra questions, contact ${config.SMTP_USER}.`,
+    note: `For any extra questions, contact willing.app.lb@gmail.com.`,
     tone: 'error',
   });
 
-  await sendEmail({ to, subject, text, html });
+  await sendEmail({ to: [to], subject, text, html });
 }
 
 export async function sendAdminOrganizationRequestEmail(
@@ -96,7 +96,7 @@ export async function sendAdminOrganizationRequestEmail(
   });
 
   await sendEmail({
-    to: adminEmails.join(', '),
+    to: adminEmails,
     subject,
     text,
     html,
@@ -143,7 +143,7 @@ export async function sendVolunteerApplicationAcceptedEmail(opts: {
     tone: 'success',
   });
 
-  await sendEmail({ to: opts.volunteerEmail, subject, text, html });
+  await sendEmail({ to: [opts.volunteerEmail], subject, text, html });
 }
 
 export async function sendVolunteerApplicationRejectedEmail(opts: {
@@ -165,7 +165,7 @@ export async function sendVolunteerApplicationRejectedEmail(opts: {
     tone: 'error',
   });
 
-  await sendEmail({ to: opts.volunteerEmail, subject, text, html });
+  await sendEmail({ to: [opts.volunteerEmail], subject, text, html });
 }
 
 export async function sendVolunteerVerificationEmail(opts: {
@@ -185,7 +185,7 @@ export async function sendVolunteerVerificationEmail(opts: {
     tone: 'primary',
   });
 
-  await sendEmail({ to: opts.volunteerEmail, subject, text, html });
+  await sendEmail({ to: [opts.volunteerEmail], subject, text, html });
 }
 
 export async function sendPostingDeletedEmail(opts: {
@@ -208,5 +208,5 @@ export async function sendPostingDeletedEmail(opts: {
     tone: 'error',
   });
 
-  await sendEmail({ to: opts.volunteerEmail, subject, text, html });
+  await sendEmail({ to: [opts.volunteerEmail], subject, text, html });
 }

@@ -120,6 +120,7 @@ function VolunteerCertificateRequest() {
     () => Number(data?.total_hours ?? 0),
     [data?.total_hours],
   );
+  const hasNoCompletedHours = totalHours <= 0;
 
   const selectedOrganizations = useMemo(
     () => organizationsWithEligibility
@@ -344,8 +345,21 @@ function VolunteerCertificateRequest() {
               })}
             </div>
 
+            {hasNoCompletedHours && (
+              <div className="alert alert-warning -mt-5">
+                <AlertCircle size={16} />
+                <span>You need to complete an opportunity before generating a certificate.</span>
+              </div>
+            )}
+
             <div className="mt-4">
-              <Button className="btn btn-primary" onClick={() => { void createCertificate(); }} Icon={FileText} loading={issuingCertificate}>
+              <Button
+                className="btn btn-primary"
+                onClick={() => { void createCertificate(); }}
+                Icon={FileText}
+                loading={issuingCertificate}
+                disabled={hasNoCompletedHours}
+              >
                 Create Certificate
               </Button>
             </div>

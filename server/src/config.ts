@@ -47,12 +47,9 @@ const schema = zod.object({
   CERTIFICATE_VERIFICATION_SECRET: zod.string().min(1),
   UPLOAD_DIR: zod.string(),
 
-  SMTP_HOST: optionalInDev(zod.string().optional()),
-  SMTP_PORT: optionalInDev(zod.coerce.number().optional()),
-  SMTP_USER: optionalInDev(zod.string().optional()),
-  SMTP_PASS: optionalInDev(zod.string().optional()),
-  MAIL_FROM: optionalInDev(zod.string().optional()),
+  WILLING_SENDER_EMAIL: optionalInDev(zod.email().optional()),
 
+  RESEND_API_KEY: optionalInDev(zod.string().startsWith('re_').optional()),
   OPENAI_API_KEY: optionalInDev(zod.string().optional()),
   LOCATION_IQ_API_KEY: optionalInDev(zod.string().optional()),
 })
@@ -60,7 +57,7 @@ const schema = zod.object({
     if (values.NODE_ENV !== 'production') return;
 
     const prodRequired: (keyof typeof values)[] = [
-      'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'MAIL_FROM', 'LOCATION_IQ_API_KEY',
+      'WILLING_SENDER_EMAIL', 'RESEND_API_KEY', 'LOCATION_IQ_API_KEY', 'OPENAI_API_KEY',
     ];
 
     prodRequired.forEach((key) => {

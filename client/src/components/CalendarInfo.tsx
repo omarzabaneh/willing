@@ -1,8 +1,14 @@
-import { CalendarDays } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { DayButton, DayPicker } from 'react-day-picker';
 
-import type { DateRange, DayButtonProps, Matcher } from 'react-day-picker';
+import type {
+  CustomComponents,
+  DateRange,
+  DayButtonProps,
+  Matcher,
+  MonthCaptionProps,
+} from 'react-day-picker';
 import type { FieldValues, Path, UseFormReturn } from 'react-hook-form';
 
 import 'react-day-picker/style.css';
@@ -11,7 +17,6 @@ interface CalendarCommonProps {
   startLabel?: string;
   endLabel?: string;
   className?: string;
-  inputType?: 'date' | 'datetime-local';
   disabledDates?: string[];
   disablePastDates?: boolean;
   allowedDates?: string[];
@@ -19,9 +24,23 @@ interface CalendarCommonProps {
   showTopLabels?: boolean;
 }
 
-type CalendarSelectionMode = 'interval' | 'range' | 'multiple' | 'single';
+type CalendarSelectionMode = 'range' | 'multiple' | 'single';
 type PickerPlacement = 'top' | 'bottom';
 const POPOVER_ANIMATION_DURATION_MS = 160;
+const MONTH_OPTIONS = [
+  { value: 1, label: 'January' },
+  { value: 2, label: 'February' },
+  { value: 3, label: 'March' },
+  { value: 4, label: 'April' },
+  { value: 5, label: 'May' },
+  { value: 6, label: 'June' },
+  { value: 7, label: 'July' },
+  { value: 8, label: 'August' },
+  { value: 9, label: 'September' },
+  { value: 10, label: 'October' },
+  { value: 11, label: 'November' },
+  { value: 12, label: 'December' },
+];
 
 interface CalendarDateRangeValue {
   from: string;
@@ -42,18 +61,8 @@ interface CalendarFormSingleProps<T extends FieldValues> extends CalendarCommonP
   datePlaceholder?: string;
 }
 
-interface CalendarControlledProps extends CalendarCommonProps {
-  selectionMode?: 'interval';
-  startValue: string;
-  endValue: string;
-  onStartChange: (value: string) => void;
-  onEndChange: (value: string) => void;
-  startPlaceholder?: string;
-  endPlaceholder?: string;
-}
-
 interface CalendarControlledRangeProps extends CalendarCommonProps {
-  selectionMode: 'range';
+  selectionMode?: 'range';
   rangeValue: CalendarDateRangeValue;
   onRangeChange: (value: CalendarDateRangeValue) => void;
   rangeLabel?: string;
@@ -78,7 +87,6 @@ interface CalendarControlledSingleProps extends CalendarCommonProps {
 
 type CalendarProps<T extends FieldValues> = CalendarFormProps<T>
   | CalendarFormSingleProps<T>
-  | CalendarControlledProps
   | CalendarControlledRangeProps
   | CalendarControlledMultipleProps
   | CalendarControlledSingleProps;
@@ -117,7 +125,7 @@ export default function CalendarInfo<T extends FieldValues>({
       );
     }
 
-    const formClassName = className ?? 'grid grid-cols-2 gap-3';
+    const formClassName = className ?? 'relative overflow-visible';
     const formStartValue = String(props.form.watch(props.startName) ?? '');
     const formEndValue = String(props.form.watch(props.endName) ?? '');
 
@@ -126,22 +134,24 @@ export default function CalendarInfo<T extends FieldValues>({
         className={formClassName}
         startLabel={startLabel}
         endLabel={endLabel}
-        startValue={formStartValue}
-        endValue={formEndValue}
-        onStartChange={(value) => {
-          props.form.setValue(props.startName, value as never, {
+        selectionMode="range"
+        rangeValue={{
+          from: formStartValue,
+          to: formEndValue,
+        }}
+        onRangeChange={({ from, to }) => {
+          props.form.setValue(props.startName, from as never, {
+            shouldDirty: true,
+            shouldTouch: true,
+            shouldValidate: true,
+          });
+          props.form.setValue(props.endName, to as never, {
             shouldDirty: true,
             shouldTouch: true,
             shouldValidate: true,
           });
         }}
-        onEndChange={(value) => {
-          props.form.setValue(props.endName, value as never, {
-            shouldDirty: true,
-            shouldTouch: true,
-            shouldValidate: true,
-          });
-        }}
+        rangeLabel={`${startLabel} - ${endLabel}`}
         {...(props.disabledDates ? { disabledDates: props.disabledDates } : {})}
         {...(props.disablePastDates ? { disablePastDates: props.disablePastDates } : {})}
         {...(props.allowedDates ? { allowedDates: props.allowedDates } : {})}
@@ -150,49 +160,28 @@ export default function CalendarInfo<T extends FieldValues>({
     );
   }
 
-  const controlledModeProps = (() => {
-    if (props.selectionMode === 'range') {
-      return {
-        selectionMode: 'range' as const,
-        rangeValue: props.rangeValue,
-        onRangeChange: props.onRangeChange,
-        ...(props.rangeLabel ? { rangeLabel: props.rangeLabel } : {}),
-        ...(props.rangePlaceholder ? { rangePlaceholder: props.rangePlaceholder } : {}),
-      };
-    }
-
-    if (props.selectionMode === 'multiple') {
-      return {
+  const controlledModeProps = props.selectionMode === 'multiple'
+    ? {
         selectionMode: 'multiple' as const,
         selectedDates: props.selectedDates,
         onSelectedDatesChange: props.onSelectedDatesChange,
-        ...(props.multipleLabel ? { multipleLabel: props.multipleLabel } : {}),
-        ...(props.multiplePlaceholder
-          ? { multiplePlaceholder: props.multiplePlaceholder }
-          : {}),
-      };
-    }
-
-    if (props.selectionMode === 'single') {
-      return {
-        selectionMode: 'single' as const,
-        singleValue: props.singleValue,
-        onSingleChange: props.onSingleChange,
-        ...(props.singleLabel ? { singleLabel: props.singleLabel } : {}),
-        ...(props.singlePlaceholder ? { singlePlaceholder: props.singlePlaceholder } : {}),
-      };
-    }
-
-    return {
-      ...(props.selectionMode ? { selectionMode: props.selectionMode } : {}),
-      startValue: props.startValue,
-      endValue: props.endValue,
-      onStartChange: props.onStartChange,
-      onEndChange: props.onEndChange,
-      ...(props.startPlaceholder ? { startPlaceholder: props.startPlaceholder } : {}),
-      ...(props.endPlaceholder ? { endPlaceholder: props.endPlaceholder } : {}),
-    };
-  })();
+        multipleLabel: props.multipleLabel,
+        multiplePlaceholder: props.multiplePlaceholder,
+      }
+    : props.selectionMode === 'single'
+      ? {
+          selectionMode: 'single' as const,
+          singleValue: props.singleValue,
+          onSingleChange: props.onSingleChange,
+          singleLabel: props.singleLabel,
+          singlePlaceholder: props.singlePlaceholder,
+        }
+      : {
+          rangeValue: props.rangeValue,
+          onRangeChange: props.onRangeChange,
+          rangeLabel: props.rangeLabel,
+          rangePlaceholder: props.rangePlaceholder,
+        };
 
   return (
     <ControlledCalendarInfo
@@ -200,10 +189,10 @@ export default function CalendarInfo<T extends FieldValues>({
       startLabel={startLabel}
       endLabel={endLabel}
       {...controlledModeProps}
-      {...(props.disabledDates ? { disabledDates: props.disabledDates } : {})}
-      {...(props.disablePastDates ? { disablePastDates: props.disablePastDates } : {})}
-      {...(props.allowedDates ? { allowedDates: props.allowedDates } : {})}
-      {...(props.dateDetails ? { dateDetails: props.dateDetails } : {})}
+      disabledDates={props.disabledDates}
+      disablePastDates={props.disablePastDates}
+      allowedDates={props.allowedDates}
+      dateDetails={props.dateDetails}
     />
   );
 }
@@ -238,6 +227,102 @@ function formatInputDate(date: Date) {
   const day = `${date.getDate()}`.padStart(2, '0');
 
   return `${year}-${month}-${day}`;
+}
+
+function getMonthStart(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function parsePositiveInteger(value: string) {
+  const parsed = Number(value);
+
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return undefined;
+  }
+
+  return parsed;
+}
+
+function MonthYearCaptionControls({
+  value,
+  onChange,
+}: {
+  value: Date;
+  onChange: (nextMonth: Date) => void;
+}) {
+  const [yearInput, setYearInput] = useState(value.getFullYear().toString());
+  useEffect(() => {
+    setYearInput(value.getFullYear().toString());
+  }, [value]);
+
+  return (
+    <div className="mx-auto flex w-full items-center gap-1.5">
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm btn-square"
+        aria-label="Previous month"
+        onClick={() => onChange(new Date(value.getFullYear(), value.getMonth() - 1, 1))}
+      >
+        <ChevronLeft size={16} />
+      </button>
+
+      <div className="flex flex-1 items-center gap-1">
+        <select
+          className="select select-bordered select-sm flex-1 min-w-0 text-sm basis-0 w-0! pr-3"
+          aria-label="Visible month month"
+          value={value.getMonth() + 1}
+          onChange={(event) => {
+            const nextValue = parsePositiveInteger(event.target.value);
+            if (!nextValue) return;
+
+            onChange(new Date(value.getFullYear(), nextValue - 1, 1));
+          }}
+        >
+          {MONTH_OPTIONS.map(option => (
+            <option key={option.value} value={option.value}>{option.label}</option>
+          ))}
+        </select>
+        <input
+          type="number"
+          min={1}
+          max={9999}
+          className="input input-bordered input-sm flex-1 min-w-0 text-sm basis-0 w-0!"
+          aria-label="Visible month year"
+          value={yearInput}
+          onChange={(event) => {
+            setYearInput(event.target.value);
+          }}
+          onBlur={() => {
+            const parsed = parsePositiveInteger(yearInput);
+
+            if (!parsed) {
+              setYearInput(value.getFullYear().toString());
+              return;
+            }
+
+            onChange(new Date(parsed, value.getMonth(), 1));
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              const parsed = parsePositiveInteger(yearInput);
+              if (parsed) {
+                onChange(new Date(parsed, value.getMonth(), 1));
+              }
+            }
+          }}
+        />
+      </div>
+
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm btn-square"
+        aria-label="Next month"
+        onClick={() => onChange(new Date(value.getFullYear(), value.getMonth() + 1, 1))}
+      >
+        <ChevronRight size={16} />
+      </button>
+    </div>
+  );
 }
 
 function buildNextValue(date: Date) {
@@ -277,12 +362,6 @@ function ControlledCalendarInfo({
   endLabel,
   className,
   showTopLabels = true,
-  startValue,
-  endValue,
-  onStartChange,
-  onEndChange,
-  startPlaceholder,
-  endPlaceholder,
   selectionMode,
   disabledDates,
   disablePastDates,
@@ -306,12 +385,6 @@ function ControlledCalendarInfo({
   disablePastDates?: boolean;
   allowedDates?: string[];
   dateDetails?: Record<string, string>;
-  startValue?: string;
-  endValue?: string;
-  onStartChange?: (value: string) => void;
-  onEndChange?: (value: string) => void;
-  startPlaceholder?: string;
-  endPlaceholder?: string;
   rangeValue?: CalendarDateRangeValue;
   onRangeChange?: (value: CalendarDateRangeValue) => void;
   rangeLabel?: string;
@@ -330,20 +403,17 @@ function ControlledCalendarInfo({
   className?: string;
   showTopLabels?: boolean;
 }) {
-  const [activePicker, setActivePicker] = useState<'start' | 'end' | null>(null);
-  const [closingPicker, setClosingPicker] = useState<'start' | 'end' | null>(null);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isPickerClosing, setIsPickerClosing] = useState(false);
   const [rangeHoverDate, setRangeHoverDate] = useState<Date>();
-  const [pickerPlacement, setPickerPlacement] = useState<Record<'start' | 'end', PickerPlacement>>({
-    start: 'bottom',
-    end: 'bottom',
-  });
+  const [pickerMonth, setPickerMonthState] = useState(getMonthStart(new Date()));
+  const [pickerPlacement, setPickerPlacement] = useState<PickerPlacement>('bottom');
   const calendarContainerRef = useRef<HTMLDivElement>(null);
   const startTriggerRef = useRef<HTMLButtonElement>(null);
-  const endTriggerRef = useRef<HTMLButtonElement>(null);
   const activePopoverRef = useRef<HTMLDivElement>(null);
   const closeTimeoutRef = useRef<number | null>(null);
 
-  const mode = selectionMode ?? 'interval';
+  const mode = selectionMode ?? 'range';
 
   const normalizedDateDetails = useMemo(() => {
     if (!dateDetails) return {};
@@ -403,8 +473,22 @@ function ControlledCalendarInfo({
       }
     : undefined;
 
+  const calendarComponents: Partial<CustomComponents> = {
+    ...(dayPickerComponents ?? {}),
+    MonthCaption: ({ calendarMonth, displayIndex, ...rest }: MonthCaptionProps) => {
+      void calendarMonth;
+      void displayIndex;
+
+      return (
+        <div {...rest} className="rdp-month_caption">
+          <MonthYearCaptionControls value={pickerMonth} onChange={setPickerMonth} />
+        </div>
+      );
+    },
+  };
+
   const controlledClassName = className ?? 'relative overflow-visible';
-  const actionButtonClassName = 'btn btn-sm';
+  const actionButtonClassName = 'btn btn-primary btn-sm';
   const secondaryActionButtonClassName = 'btn btn-ghost btn-sm';
   const dateFormatter = new Intl.DateTimeFormat(undefined, {
     year: 'numeric',
@@ -419,32 +503,39 @@ function ControlledCalendarInfo({
     }
   };
 
-  const beginClosePicker = (picker: 'start' | 'end') => {
-    if (activePicker !== picker) return;
+  const beginClosePicker = () => {
+    if (!isPickerOpen) return;
 
     clearCloseTimeout();
-    setClosingPicker(picker);
+    setIsPickerClosing(true);
     closeTimeoutRef.current = window.setTimeout(() => {
-      setActivePicker(null);
-      setClosingPicker(null);
+      setIsPickerOpen(false);
+      setIsPickerClosing(false);
       setRangeHoverDate(undefined);
       closeTimeoutRef.current = null;
     }, POPOVER_ANIMATION_DURATION_MS);
   };
 
-  const openOrTogglePicker = (picker: 'start' | 'end') => {
-    if (activePicker === picker && closingPicker !== picker) {
-      beginClosePicker(picker);
+  const setPickerMonth = (month: Date) => {
+    setPickerMonthState(getMonthStart(month));
+  };
+
+  const openOrTogglePicker = (month?: Date) => {
+    if (isPickerOpen && !isPickerClosing) {
+      beginClosePicker();
       return;
     }
 
     clearCloseTimeout();
-    setClosingPicker(null);
-    setActivePicker(picker);
+    setIsPickerClosing(false);
+    if (month) {
+      setPickerMonth(getMonthStart(month));
+    }
+    setIsPickerOpen(true);
   };
 
   useEffect(() => {
-    if (!activePicker) return;
+    if (!isPickerOpen) return;
 
     const handleClickOutside = (event: PointerEvent) => {
       const target = event.target;
@@ -452,9 +543,7 @@ function ControlledCalendarInfo({
       if (!calendarContainerRef.current) return;
       if (calendarContainerRef.current.contains(target)) return;
 
-      if (activePicker) {
-        beginClosePicker(activePicker);
-      }
+      beginClosePicker();
     };
 
     document.addEventListener('pointerdown', handleClickOutside);
@@ -462,7 +551,7 @@ function ControlledCalendarInfo({
     return () => {
       document.removeEventListener('pointerdown', handleClickOutside);
     };
-  }, [activePicker]);
+  }, [isPickerOpen]);
 
   useEffect(() => {
     return () => {
@@ -471,10 +560,9 @@ function ControlledCalendarInfo({
   }, []);
 
   useLayoutEffect(() => {
-    if (!activePicker) return;
+    if (!isPickerOpen) return;
 
-    const triggerRef = activePicker === 'start' ? startTriggerRef : endTriggerRef;
-    const trigger = triggerRef.current;
+    const trigger = startTriggerRef.current;
     const popover = activePopoverRef.current;
     if (!trigger || !popover) return;
 
@@ -487,171 +575,26 @@ function ControlledCalendarInfo({
       ? 'top'
       : 'bottom';
 
-    setPickerPlacement((prev) => {
-      if (prev[activePicker] === nextPlacement) return prev;
-      return {
-        ...prev,
-        [activePicker]: nextPlacement,
-      };
-    });
-  }, [activePicker]);
+    setPickerPlacement(prev => (prev === nextPlacement ? prev : nextPlacement));
+  }, [isPickerOpen]);
 
-  const getPopoverPlacementClass = (picker: 'start' | 'end') => {
-    return pickerPlacement[picker] === 'top' ? 'bottom-full mb-2' : 'top-full mt-2';
+  const getPopoverPlacementClass = () => {
+    return pickerPlacement === 'top' ? 'sm:bottom-full sm:mb-2' : 'sm:top-full sm:mt-2';
   };
 
-  const getPopoverAnimationClass = (picker: 'start' | 'end') => {
-    const isClosing = closingPicker === picker;
+  const getPopoverAnimationClass = () => {
+    const isClosing = isPickerClosing;
 
     if (isClosing) {
-      return pickerPlacement[picker] === 'top'
+      return pickerPlacement === 'top'
         ? 'willing-calendar-popover willing-calendar-popover-closing-top pointer-events-none'
         : 'willing-calendar-popover willing-calendar-popover-closing-bottom pointer-events-none';
     }
 
-    return pickerPlacement[picker] === 'top'
+    return pickerPlacement === 'top'
       ? 'willing-calendar-popover willing-calendar-popover-top'
       : 'willing-calendar-popover willing-calendar-popover-bottom';
   };
-
-  if (mode === 'interval') {
-    const selectedStartDate = parseSelectedDate(startValue ?? '');
-    const selectedEndDate = parseSelectedDate(endValue ?? '');
-
-    const startText = selectedStartDate
-      ? dateFormatter.format(selectedStartDate)
-      : (startPlaceholder ?? startLabel);
-
-    const endText = selectedEndDate
-      ? dateFormatter.format(selectedEndDate)
-      : (endPlaceholder ?? endLabel);
-
-    const dateClassName = className ?? 'contents';
-
-    return (
-      <div ref={calendarContainerRef} className={dateClassName}>
-        <fieldset className="fieldset w-full">
-          <div className="relative">
-            {showTopLabels && (
-              <label className="label mb-1">
-                <span className="label-text font-medium">{startLabel}</span>
-              </label>
-            )}
-            <button
-              ref={startTriggerRef}
-              type="button"
-              className="input input-bordered flex w-full items-center justify-between gap-2"
-              onClick={() => openOrTogglePicker('start')}
-            >
-              <span className="truncate text-left">{startText}</span>
-              <CalendarDays size={16} className="shrink-0 opacity-70" />
-            </button>
-
-            {activePicker === 'start' && (
-              <div
-                ref={activePopoverRef}
-                className={`absolute left-0 z-500 rounded-box border border-base-300 bg-base-100 p-3 shadow-xl ${getPopoverPlacementClass('start')} ${getPopoverAnimationClass('start')}`}
-              >
-                <DayPicker
-                  className="willing-day-picker"
-                  mode="single"
-                  selected={selectedStartDate}
-                  disabled={disabledMatchers}
-                  components={dayPickerComponents}
-                  onSelect={(date) => {
-                    if (!onStartChange) return;
-
-                    onStartChange(date ? buildNextValue(date) : '');
-                    if (date) {
-                      beginClosePicker('start');
-                    }
-                  }}
-                />
-
-                <div className="mt-3 flex items-center justify-between">
-                  <button
-                    type="button"
-                    className={secondaryActionButtonClassName}
-                    onClick={() => onStartChange?.('')}
-                  >
-                    Clear
-                  </button>
-
-                  <button
-                    type="button"
-                    className={actionButtonClassName}
-                    onClick={() => beginClosePicker('start')}
-                  >
-                    Done
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </fieldset>
-
-        <fieldset className="fieldset w-full">
-          <div className="relative">
-            {showTopLabels && (
-              <label className="label mb-1">
-                <span className="label-text font-medium">{endLabel}</span>
-              </label>
-            )}
-            <button
-              ref={endTriggerRef}
-              type="button"
-              className="input input-bordered flex w-full items-center justify-between gap-2"
-              onClick={() => openOrTogglePicker('end')}
-            >
-              <span className="truncate text-left">{endText}</span>
-              <CalendarDays size={16} className="shrink-0 opacity-70" />
-            </button>
-
-            {activePicker === 'end' && (
-              <div
-                ref={activePopoverRef}
-                className={`absolute left-0 z-500 rounded-box border border-base-300 bg-base-100 p-3 shadow-xl ${getPopoverPlacementClass('end')} ${getPopoverAnimationClass('end')}`}
-              >
-                <DayPicker
-                  className="willing-day-picker"
-                  mode="single"
-                  selected={selectedEndDate}
-                  disabled={disabledMatchers}
-                  components={dayPickerComponents}
-                  onSelect={(date) => {
-                    if (!onEndChange) return;
-
-                    onEndChange(date ? buildNextValue(date) : '');
-                    if (date) {
-                      beginClosePicker('end');
-                    }
-                  }}
-                />
-
-                <div className="mt-3 flex items-center justify-between">
-                  <button
-                    type="button"
-                    className={secondaryActionButtonClassName}
-                    onClick={() => onEndChange?.('')}
-                  >
-                    Clear
-                  </button>
-
-                  <button
-                    type="button"
-                    className={actionButtonClassName}
-                    onClick={() => beginClosePicker('end')}
-                  >
-                    Done
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </fieldset>
-      </div>
-    );
-  }
 
   if (mode === 'range') {
     const currentRange = rangeValue ?? { from: '', to: '' };
@@ -676,7 +619,7 @@ function ControlledCalendarInfo({
           hoverRangeEnd: hoverPreviewRange.to,
         }
       : undefined;
-    const rangeFieldLabel = rangeLabel ?? 'Date Range';
+    const rangeFieldLabel = rangeLabel ?? `${startLabel} - ${endLabel}`;
 
     let valueText = rangePlaceholder ?? 'Select range';
     if (selectedFromDate) {
@@ -705,31 +648,42 @@ function ControlledCalendarInfo({
               ref={startTriggerRef}
               type="button"
               className="input input-bordered flex w-full items-center justify-between gap-2"
-              onClick={() => openOrTogglePicker('start')}
+              onClick={() => openOrTogglePicker(selectedFromDate ?? selectedToDate ?? new Date())}
             >
               <span className="truncate text-left">{valueText}</span>
               <CalendarDays size={16} className="shrink-0 opacity-70" />
             </button>
 
-            {activePicker === 'start' && (
+            {isPickerOpen && (
               <div
                 ref={activePopoverRef}
-                className={`absolute left-0 z-500 rounded-box border border-base-300 bg-base-100 p-3 shadow-xl ${getPopoverPlacementClass('start')} ${getPopoverAnimationClass('start')}`}
+                className={`
+                  fixed inset-x-4 top-20 z-500 max-w-md mx-auto
+                  sm:absolute sm:top-auto sm:inset-x-auto sm:left-0 sm:translate-x-0 sm:mx-0 sm:w-auto sm:min-w-[20rem]
+                  rounded-box border border-base-300 bg-base-100 p-3 shadow-xl
+                  ${getPopoverPlacementClass()}
+                  ${getPopoverAnimationClass()}
+                `}
               >
                 <DayPicker
-                  className="willing-day-picker"
-                  style={{ maxHeight: '75vh', overflowY: 'auto' }}
+                  className="willing-day-picker w-full"
+                  style={{ maxHeight: '75vh', overflowY: 'auto', width: '100%' }}
                   mode="range"
                   selected={selectedRange}
                   disabled={disabledMatchers}
                   excludeDisabled={Boolean(disabledMatchers)}
+                  fixedWeeks
+                  showOutsideDays
+                  hideNavigation
+                  month={pickerMonth}
+                  onMonthChange={setPickerMonth}
                   modifiers={hoverRangeModifiers}
                   modifiersClassNames={{
                     hoverRange: 'willing-hover-range',
                     hoverRangeStart: 'willing-hover-range-start',
                     hoverRangeEnd: 'willing-hover-range-end',
                   }}
-                  components={dayPickerComponents}
+                  components={calendarComponents}
                   onDayMouseEnter={(date, modifiers) => {
                     handleRangePreviewHover(date, modifiers.disabled);
                   }}
@@ -753,22 +707,32 @@ function ControlledCalendarInfo({
                   }}
                 />
 
-                <div className="mt-3 flex items-center justify-between">
+                <div className="mt-3 flex items-center justify-between gap-2">
                   <button
                     type="button"
                     className={secondaryActionButtonClassName}
-                    onClick={() => onRangeChange?.({ from: '', to: '' })}
+                    onClick={() => setPickerMonth(new Date())}
                   >
-                    Clear
+                    Today
                   </button>
 
-                  <button
-                    type="button"
-                    className={actionButtonClassName}
-                    onClick={() => beginClosePicker('start')}
-                  >
-                    Done
-                  </button>
+                  <div className="ml-auto flex items-center gap-2">
+                    <button
+                      type="button"
+                      className={secondaryActionButtonClassName}
+                      onClick={() => onRangeChange?.({ from: '', to: '' })}
+                    >
+                      Clear
+                    </button>
+
+                    <button
+                      type="button"
+                      className={actionButtonClassName}
+                      onClick={beginClosePicker}
+                    >
+                      Done
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -803,49 +767,71 @@ function ControlledCalendarInfo({
               ref={startTriggerRef}
               type="button"
               className="input input-bordered flex w-full items-center justify-between gap-2"
-              onClick={() => openOrTogglePicker('start')}
+              onClick={() => openOrTogglePicker(selectedDate ?? new Date())}
             >
               <span className="truncate text-left">{singleText}</span>
               <CalendarDays size={16} className="shrink-0 opacity-70" />
             </button>
 
-            {activePicker === 'start' && (
+            {isPickerOpen && (
               <div
                 ref={activePopoverRef}
-                className={`absolute left-0 z-500 rounded-box border border-base-300 bg-base-100 p-3 shadow-xl ${getPopoverPlacementClass('start')} ${getPopoverAnimationClass('start')}`}
+                className={`
+                  fixed inset-x-4 top-20 z-500 max-w-md mx-auto
+                  sm:absolute sm:top-auto sm:inset-x-auto sm:left-0 sm:translate-x-0 sm:mx-0 sm:w-auto sm:min-w-[20rem]
+                  rounded-box border border-base-300 bg-base-100 p-3 shadow-xl
+                  ${getPopoverPlacementClass()}
+                  ${getPopoverAnimationClass()}
+                `}
               >
                 <DayPicker
-                  className="willing-day-picker"
+                  className="willing-day-picker w-full"
+                  style={{ width: '100%' }}
                   mode="single"
                   selected={selectedDate}
                   disabled={disabledMatchers}
-                  components={dayPickerComponents}
+                  fixedWeeks
+                  showOutsideDays
+                  hideNavigation
+                  month={pickerMonth}
+                  onMonthChange={setPickerMonth}
+                  components={calendarComponents}
                   onSelect={(date) => {
                     if (!onSingleChange) return;
 
                     onSingleChange(date ? buildNextValue(date) : '');
                     if (date) {
-                      beginClosePicker('start');
+                      beginClosePicker();
                     }
                   }}
                 />
 
-                <div className="mt-3 flex items-center justify-between">
+                <div className="mt-3 flex items-center justify-between gap-2">
                   <button
                     type="button"
                     className={secondaryActionButtonClassName}
-                    onClick={() => onSingleChange?.('')}
+                    onClick={() => setPickerMonth(new Date())}
                   >
-                    Clear
+                    Today
                   </button>
 
-                  <button
-                    type="button"
-                    className={actionButtonClassName}
-                    onClick={() => beginClosePicker('start')}
-                  >
-                    Done
-                  </button>
+                  <div className="ml-auto flex items-center gap-2">
+                    <button
+                      type="button"
+                      className={secondaryActionButtonClassName}
+                      onClick={() => onSingleChange?.('')}
+                    >
+                      Clear
+                    </button>
+
+                    <button
+                      type="button"
+                      className={actionButtonClassName}
+                      onClick={beginClosePicker}
+                    >
+                      Done
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -877,23 +863,35 @@ function ControlledCalendarInfo({
             ref={startTriggerRef}
             type="button"
             className="input input-bordered flex w-full items-center justify-between gap-2"
-            onClick={() => openOrTogglePicker('start')}
+            onClick={() => openOrTogglePicker(parsedSelectedDates[0] ?? new Date())}
           >
             <span className="truncate overflow-hidden whitespace-nowrap text-ellipsis block max-w-[calc(100%-2.5rem)]" title={allSelectedDateText || dateListText}>{dateListText}</span>
             <CalendarDays size={16} className="shrink-0 opacity-70" />
           </button>
 
-          {activePicker === 'start' && (
+          {isPickerOpen && (
             <div
               ref={activePopoverRef}
-              className={`absolute left-0 z-500 rounded-box border border-base-300 bg-base-100 p-3 shadow-xl ${getPopoverPlacementClass('start')} ${getPopoverAnimationClass('start')}`}
+              className={`
+                fixed inset-x-4 top-20 z-500 max-w-md mx-auto
+                sm:absolute sm:top-auto sm:inset-x-auto sm:left-0 sm:translate-x-0 sm:mx-0 sm:w-auto sm:min-w-[20rem]
+                rounded-box border border-base-300 bg-base-100 p-3 shadow-xl
+                ${getPopoverPlacementClass()}
+                ${getPopoverAnimationClass()}
+              `}
             >
               <DayPicker
-                className="willing-day-picker"
+                className="willing-day-picker w-full"
+                style={{ width: '100%' }}
                 mode="multiple"
                 selected={parsedSelectedDates}
                 disabled={disabledMatchers}
-                components={dayPickerComponents}
+                fixedWeeks
+                showOutsideDays
+                hideNavigation
+                month={pickerMonth}
+                onMonthChange={setPickerMonth}
+                components={calendarComponents}
                 onSelect={(dates) => {
                   if (!onSelectedDatesChange) return;
 
@@ -905,22 +903,32 @@ function ControlledCalendarInfo({
                 }}
               />
 
-              <div className="mt-3 flex items-center justify-between">
+              <div className="mt-3 flex items-center justify-between gap-2">
                 <button
                   type="button"
                   className={secondaryActionButtonClassName}
-                  onClick={() => onSelectedDatesChange?.([])}
+                  onClick={() => setPickerMonth(new Date())}
                 >
-                  Clear
+                  Today
                 </button>
 
-                <button
-                  type="button"
-                  className={actionButtonClassName}
-                  onClick={() => beginClosePicker('start')}
-                >
-                  Done
-                </button>
+                <div className="ml-auto flex items-center gap-2">
+                  <button
+                    type="button"
+                    className={secondaryActionButtonClassName}
+                    onClick={() => onSelectedDatesChange?.([])}
+                  >
+                    Clear
+                  </button>
+
+                  <button
+                    type="button"
+                    className={actionButtonClassName}
+                    onClick={beginClosePicker}
+                  >
+                    Done
+                  </button>
+                </div>
               </div>
             </div>
           )}

@@ -33,7 +33,7 @@ import {
   recomputeVolunteerProfileVector,
 } from '../../../services/embeddings/updates.ts';
 import { generateJWT } from '../../../services/jwt/index.ts';
-import { sendVolunteerVerificationEmail } from '../../../services/smtp/emails.ts';
+import { sendVolunteerVerificationEmail } from '../../../services/resend/emails.ts';
 import { getVolunteerProfile } from '../../../services/volunteer/index.ts';
 import { normalizeSearchTerms } from '../utils/postingList.js';
 import { canRecomputeProfileVector } from '../utils/rateLimit.ts';
@@ -577,6 +577,11 @@ function createVolunteerRouter(db: Kysely<Database>) {
     });
 
     const totalHours = Number(rows.reduce((sum, row) => sum + Number(row.hours ?? 0), 0).toFixed(2));
+
+    if (totalHours <= 0) {
+      res.status(400);
+      throw new Error('You need completed volunteering hours before generating a certificate.');
+    }
 
     if (selectedOrgIds.length > 0) {
       const activeOrganizations = await db

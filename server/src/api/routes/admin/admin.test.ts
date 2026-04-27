@@ -8,7 +8,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import createApp from '../../../app.ts';
 import database from '../../../db/index.ts';
 import * as embeddingService from '../../../services/embeddings/updates.ts';
-import * as emailService from '../../../services/smtp/emails.ts';
+import * as emailService from '../../../services/resend/emails.ts';
 import { PLATFORM_SIGNATURE_UPLOAD_DIR } from '../../../services/uploads/paths.ts';
 import { getAbsolutePlatformSignaturePath } from '../../../services/uploads/platformSignature.ts';
 import { createAdminAccount, createOrganizationAccount } from '../../../tests/fixtures/accounts.ts';

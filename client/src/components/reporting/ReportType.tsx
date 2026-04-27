@@ -12,7 +12,7 @@ function ReportType({ title, size = 'md', className = '' }: ReportTypeProps) {
   const sizeClassName = size === 'lg' ? 'badge-lg' : '';
 
   return (
-    <span className={`badge badge-error badge-outline ${sizeClassName} ${className}`.trim()}>
+    <span className={`badge badge-error badge-outline h-auto whitespace-normal text-center ${sizeClassName} ${className}`.trim()}>
       {formatReportType(title)}
     </span>
   );
